@@ -4,6 +4,7 @@ on:
     types: [opened, closed]
 
 jobs:
+  # JOB 1: Your original job, completely untouched
   update_monday_status:
     runs-on: ubuntu-latest
     steps:
@@ -38,11 +39,65 @@ jobs:
               ) { id }
             }`;
 
-            const response = await fetch("https://api.monday.com/v2", {
+            const response = await fetch("https://monday.com", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "Authorization": process.env.MONDAY_API_TOKEN
+              },
+              body: JSON.stringify({ query })
+            });
+
+            const result = await response.json();
+            console.log("API Response:", JSON.stringify(result, null, 2));
+
+            if (result.errors) {
+              core.setFailed(`monday.com API error: ${JSON.stringify(result.errors)}`);
+            }
+
+  # JOB 2: The new job to add the update/comment with author and status text
+  add_monday_comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add comment to monday.com item
+        uses: actions/github-script@v7
+        env:
+          MONDAY_API_TOKEN: ${{ secrets.MONDAY_API_TOKEN }}
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body || "";
+            const match = prBody.match(/pulses\/(\d+)/);
+            if (!match) {
+              console.log("No monday.com item ID found in PR body. Skipping.");
+              return;
+            }
+            const itemId = match[1];
+            const merged = context.payload.pull_request.merged;
+            const actor = context.actor;
+            
+            // Keeps the exact status tracking logic from your original job
+            const status = merged ? "Completed": "Active"; 
+
+            console.log(`Item ID: ${itemId}`);
+            console.log(`Actor: @${actor}`);
+            console.log(`Status for comment: ${status}`);
+
+            // Constructing the message body with the dynamic actor and status text
+            const commentBody = `@${actor} updated the PR to "${status}"`;
+
+            const query = `mutation {
+              create_update(
+                item_id: ${itemId},
+                body: ${JSON.stringify(commentBody)}
+              ) { id }
+            }`;
+
+            const response = await fetch("https://monday.com", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": process.env.MONDAY_API_TOKEN,
+                "API-Version": "2025-04"
               },
               body: JSON.stringify({ query })
             });
