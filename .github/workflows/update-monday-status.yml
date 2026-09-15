@@ -7,14 +7,39 @@ jobs:
   update_monday_status:
     runs-on: ubuntu-latest
     steps:
-      - name: Call Monday.com API
-        uses: willstenzel/update-monday-status-action@v1.0
+      - name: Update monday.com status
+        uses: actions/github-script@v7
+        env:
+          MONDAY_API_TOKEN: ${{ secrets.MONDAY_API_TOKEN }}
         with:
-          API_TOKEN: ${{ secrets.MONDAY_API_TOKEN }}
-          BOARD_ID: 5031246877
-          COLUMN_ID: "color_mm73nxe5"
-          submitted-status: "In Progress"
-          merged-status: "Done"
-          pull-request-body: ${{ github.event.pull_request.body }}
-          merged: ${{ github.event.pull_request.merged }}
-        if: contains(github.event.pull_request.body, 'pulses')
+          script: |
+            const prBody = context.payload.pull_request.body || "";
+            const match = prBody.match(/pulses\/(\d+)/);
+            if (!match) {
+              console.log("No monday.com item ID found in PR body. Skipping.");
+              return;
+            }
+            const itemId = match[1];
+            const merged = context.payload.pull_request.merged;
+            const status = merged ? "Done" : "In Progress";
+
+            const query = `mutation {
+              change_simple_column_value(
+                board_id: 5031246877,
+                item_id: ${itemId},
+                column_id: "color_mm73nxe5",
+                value: "${status}"
+              ) { id }
+            }`;
+
+            const response = await fetch("https://api.monday.com/v2", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": process.env.MONDAY_API_TOKEN
+              },
+              body: JSON.stringify({ query })
+            });
+
+            const result = await response.json();
+            console.log(JSON.stringify(result, null, 2));
