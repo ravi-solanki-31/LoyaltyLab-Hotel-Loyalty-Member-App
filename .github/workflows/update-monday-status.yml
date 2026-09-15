@@ -23,12 +23,18 @@ jobs:
             const merged = context.payload.pull_request.merged;
             const status = merged ? "Done" : "In Progress";
 
+            console.log(`Item ID: ${itemId}`);
+            console.log(`Merged: ${merged}`);
+            console.log(`Setting status to: ${status}`);
+
+            const columnValue = JSON.stringify(JSON.stringify({ label: status }));
+
             const query = `mutation {
-              change_simple_column_value(
+              change_column_value(
                 board_id: 5031246877,
                 item_id: ${itemId},
                 column_id: "color_mm73nxe5",
-                value: "${status}"
+                value: ${columnValue}
               ) { id }
             }`;
 
@@ -42,4 +48,8 @@ jobs:
             });
 
             const result = await response.json();
-            console.log(JSON.stringify(result, null, 2));
+            console.log("API Response:", JSON.stringify(result, null, 2));
+
+            if (result.errors) {
+              core.setFailed(`monday.com API error: ${JSON.stringify(result.errors)}`);
+            }
