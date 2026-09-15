@@ -13,7 +13,7 @@ jobs:
           API_TOKEN: ${{ secrets.MONDAY_API_TOKEN }}
           BOARD_ID: 5031246877
           COLUMN_ID: "color_mm73nxe5"
-          submitted-status: "Working on it"
+          submitted-status: "In Progress"
           merged-status: "Done"
           pull-request-body: ${{ github.event.pull_request.body }}
           merged: ${{ github.event.pull_request.merged }}
