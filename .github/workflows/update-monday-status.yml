@@ -21,7 +21,7 @@ jobs:
             }
             const itemId = match[1];
             const merged = context.payload.pull_request.merged;
-            const status = merged ? "Done" : "In Progress";
+            const status = merged ? "Completed": "Active";
 
             console.log(`Item ID: ${itemId}`);
             console.log(`Merged: ${merged}`);
